@@ -1,0 +1,138 @@
+#################################################################
+# Name: Idrees Ally
+#
+# Last Date Modified: 6/26/15
+#
+# Program Name: ally_idrees_h2
+#
+# Description: This program illustrates implements a recursive function call
+#
+# Pseudocode:
+#	Func(n): if (n=0 or n=1 or n=2)
+#	 then Func(n) = 5;
+#	else Func(n) = (n+2)*Func(n-2)-n;
+#
+#	Have n (n>= 0) be prompted from the user.
+#	Check for correct input.
+#	If n is not a natural number display an error message.
+#	Else, display a result_message together with the numeric value of the
+#	function.
+#	Repeat
+#
+# Registers: s0, s2, s2 used for basecase values
+#
+################################################################
+
+.data
+	prompt: .asciiz "\nEnter an integer greater than or equal to 0: "
+	result: .asciiz "\nYour result is: "
+	errormsg: .asciiz "\nYour integer must be greater than or equal to 0.\n"
+	baseCaseMsg: .asciiz "\nAs a result of entering the base case, your result is: 5."
+
+.text
+	# Create baseCase value
+	li $s0, 0
+	li $s1, 1
+	li $s2, 2
+	
+	# Prompt the user for the number
+begin:	li $v0, 4
+	la $a0, prompt
+	syscall
+	
+	# Read the number
+	li $v0, 5
+	syscall
+	
+	# Check if value of input is acceptable
+	slt $t0, $v0, $zero
+	bne $t0, $zero, error
+	beq, $t0, $zero, continue
+	
+lastMultiplyZero: 
+	# When doing recursion and n=0, func(n) = 5
+	li $t3, 5
+	mul $t3, $t3, 2
+	add $s3, $s3, $t3
+	j done
+	
+lastMultiplyOne: 
+	# When doing recursion and n=0, func(n) = 5
+	li $t4, 5
+	mul $t4, $t4, 3
+	add $t4, $t4, -1
+	add $s3, $s3, $t4
+	j done
+
+lastMultiplyTwo: 
+	# When doing recursion and n=0, func(n) = 5
+	li $t5, 5
+	mul $t5, $t5, 2
+	add $t5, $t5, -2
+	add $s3, $s3, $t5
+	j done
+	
+error:  
+	# Print error and ask again
+	li $v0, 4
+	la $a0, errormsg
+	syscall
+	J begin
+
+baseCase:
+	# Print the Base Case	
+	li $v0, 4
+	la $a0, baseCaseMsg
+	syscall
+	J begin
+	
+continue: 
+	# Free $v0,  $a0 gets value input
+	move $a0, $v0
+	
+	# Check for Base Case
+	beq $a0, $s0, baseCase
+	beq $a0, $s1, baseCase
+	beq $a0, $s2, baseCase
+	
+	jal func
+	
+	# Print result message
+	li $v0, 4					
+	la $a0, result
+	syscall
+
+	# Print result
+	li $v0, 1
+	move $a0, $s3
+	syscall
+	J begin
+
+func:	
+	# Allocate space in stack
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	
+	li $v0, 1
+	
+	beq $a0, $s0, lastMultiplyZero
+	beq $a0, $s1, lastMultiplyOne
+	beq $a0, $s2, lastMultiplyTwo
+	
+	sw $a0, 0($sp)		# save original n for after jal
+	
+	# else Func(n) = (n+2)*Func(n-2)-n;
+	addi $a0, $a0, -2   	# Func(n-2)
+	jal func
+	lw $t1, 0($sp)
+	
+	addi $t2, $t1, 2 	# (n+2) = $t2
+	mul $v0, $v0, $t2 	#(n+2)*Func(n-2)
+	sub $v0, $v0, $t1	# (n+2)*Func(n-2)-n
+	move $s3, $v0
+		
+done:
+	lw $a0,0($sp)
+	lw $ra, 4($sp)
+	addi $sp, $sp, 8
+	jr $ra
